@@ -38,9 +38,10 @@ module Sass::Tree
 
     # @param uri [String] See \{#resolved_uri}
     # @return [CssImportNode]
-    def self.resolved(uri)
+    def self.resolved(uri, resolved_query = nil)
       node = new(uri)
       node.resolved_uri = uri
+      node.resolved_query = resolved_query
       node
     end
 

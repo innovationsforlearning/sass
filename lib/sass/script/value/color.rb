@@ -580,6 +580,11 @@ module Sass::Script::Value
       COLOR_NAMES_REVERSE[rgba]
     end
 
+    def to_sexp
+      s(:call, sass(:Sass, :Script, :Value, :Color), :new,
+        lit(@attrs), s(:str, representation), s(:true))
+    end
+
     private
 
     def smallest

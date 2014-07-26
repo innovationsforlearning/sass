@@ -65,6 +65,13 @@ module Sass::Supports
       "#{left_parens @left.to_src(options)} #{op} #{right_parens @right.to_src(options)}"
     end
 
+    def to_sexp(visitor)
+      s(:dstr, '',
+        s(:evstr, @left.to_sexp(visitor)),
+        s(:str, " #{op} "),
+        s(:evstr, @right.to_sexp(visitor)))
+    end
+
     def deep_copy
       copy = dup
       copy.left = @left.deep_copy
@@ -123,6 +130,10 @@ module Sass::Supports
       condition.options = options
     end
 
+    def to_sexp(visitor)
+      s(:dstr, "not ", s(:evstr, @condition.to_sexp(visitor)))
+    end
+
     private
 
     def parens(str)
@@ -172,6 +183,14 @@ module Sass::Supports
       "(#{@name.to_sass(options)}: #{@value.to_sass(options)})"
     end
 
+    def to_sexp(visitor)
+      s(:dstr, "(",
+        s(:evstr, @name.to_sexp(visitor)),
+        s(:str, ": "),
+        s(:evstr, @value.to_sexp(visitor)),
+        s(:str, ")"))
+    end
+
     def deep_copy
       copy = dup
       copy.name = @name.deep_copy
@@ -212,6 +231,10 @@ module Sass::Supports
 
     def to_src(options)
       @value.to_sass(options)
+    end
+
+    def to_sexp(visitor)
+      s(:call, value.to_sexp(visitor), :to_s, s(:hash, s(:lit, :quote), s(:lit, :none)))
     end
 
     def deep_copy

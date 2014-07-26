@@ -71,6 +71,24 @@ module Sass::Script::Tree
 
     protected
 
+    def _to_sexp(visitor)
+      before_var = visitor.environment.unique_ident(:before)
+      mid_var = visitor.environment.unique_ident(:mid)
+      after_var = visitor.environment.unique_ident(:after)
+
+      s(:block,
+        s(:lasgn, before_var, @before.to_sexp),
+        s(:lasgn, mid_var, @mid.to_sexp),
+        s(:if, s(:call, s(:lvar, mid_var), :is_a?, sass(:Script, :Value, :String)),
+            s(:lasgn, mid_var, s(:call, mid_var, :value))),
+        s(:lasgn, after_var, @after.to_sexp),
+        s(:call, sass(:Script, :Value, :String), :new,
+          s(:dstr, "",
+            s(:evstr, s(:lvar, before_var)),
+            s(:evstr, s(:lvar, mid_var)),
+            s(:evstr, s(:lvar, after_var)))))
+    end
+
     # Evaluates the interpolation.
     #
     # @param environment [Sass::Environment] The environment in which to evaluate the SassScript

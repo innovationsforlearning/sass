@@ -114,6 +114,20 @@ module Sass::Script::Tree
 
     protected
 
+    def _to_sexp(visitor)
+      variable, function = visitor.environment.fn_variable(name)
+      unless variable
+        # Sass::Script::Value::String.new("#{name}(#{arg1}, #{arg2})")
+        return s(:call, sass(:Script, :Value, :String), :new,
+          s(:dstr, "#{name}(").concat(Sass::Util.intersperse(args.map do |arg|
+              s(:evstr, arg.to_sexp(visitor))
+           end, s(:str, ", "))) << s(:str, ")"))
+      end
+
+      Sass::Tree::Visitors::ToSexp.run_callable(
+        variable, function, self, "function #{function.name}", environment)
+    end
+
     # Evaluates the function call.
     #
     # @param environment [Sass::Environment] The environment in which to evaluate the SassScript

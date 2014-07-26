@@ -93,5 +93,9 @@ module Sass::Script::Value
     def inspect
       String.quote(value)
     end
+
+    def to_sexp
+      s(:call, sass(:Script, :Value, :String), :new, s(:str, value))
+    end
   end
 end

@@ -87,6 +87,30 @@ module Sass::Script::Tree
 
     protected
 
+    def _to_sexp(visitor)
+      block = s(:block)
+      if @before
+        before_var = visitor.environment.unique_ident(:before)
+        block << s(:lasgn, before_var, @before.to_sexp(visitor))
+      end
+      mid_var = visitor.environment.unique_ident(:mid)
+      block << s(:lasgn, mid_var, @mid.to_sexp(visitor))
+      block << s(:if, s(:call, s(:lvar, mid_var), :is_a?, sass(:Script, :Value, :String)),
+        s(:lasgn, mid_var, s(:call, s(:lvar, mid_var), :value)))
+      if @after
+        after_var = visitor.environment.unique_ident(:after)
+        block << s(:lasgn, after_var, @after.to_sexp(visitor))
+      end
+
+      interp = s(:dstr, "")
+      interp << s(:evstr, s(:lvar, before_var)) if @before
+      interp << s(:str, ' ') if @before && @whitespace_before
+      interp << s(:evstr, s(:lvar, mid_var))
+      interp << s(:str, ' ') if @after && @whitespace_after
+      interp << s(:evstr, s(:lvar, after_var)) if @after
+      block << s(:call, sass(:Script, :Value, :String), :new, interp)
+    end
+
     # Evaluates the interpolation.
     #
     # @param environment [Sass::Environment] The environment in which to evaluate the SassScript

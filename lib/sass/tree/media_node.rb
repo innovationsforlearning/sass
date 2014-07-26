@@ -27,6 +27,12 @@ module Sass::Tree
       super('')
     end
 
+    def self.resolved(resolved)
+      node = new([])
+      node.resolved_query = resolved
+      node
+    end
+
     # @see DirectiveNode#value
     def value; raise NotImplementedError; end
 

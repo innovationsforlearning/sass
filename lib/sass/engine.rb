@@ -38,6 +38,7 @@ require 'sass/tree/visitors/cssize'
 require 'sass/tree/visitors/extend'
 require 'sass/tree/visitors/convert'
 require 'sass/tree/visitors/to_css'
+require 'sass/tree/visitors/to_sexp'
 require 'sass/tree/visitors/deep_copy'
 require 'sass/tree/visitors/set_options'
 require 'sass/tree/visitors/check_nesting'
@@ -51,6 +52,8 @@ require 'sass/importers'
 require 'sass/shared'
 require 'sass/media'
 require 'sass/supports'
+require 'sass/ruby_mapper'
+require 'sass/ruby2ruby'
 
 module Sass
   # A Sass mixin or function.

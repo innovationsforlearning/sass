@@ -16,8 +16,11 @@ module Sass::Script::Value
     # @param value [Array<Value>] See \{List#value}.
     # @param keywords [Hash<String, Value>, NormalizedMap<Value>] See \{#keywords}
     # @param separator [String] See \{List#separator}.
-    def initialize(value, keywords, separator)
-      super(value, separator)
+    def initialize(args)
+      keywords = args.shift if args.first.is_a?(Sass::Util::NormalizedMap) || args.first.is_a?(Hash)
+
+      super(args, :comma)
+
       if keywords.is_a?(Sass::Util::NormalizedMap)
         @keywords = keywords
       else

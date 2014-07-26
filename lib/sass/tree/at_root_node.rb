@@ -48,6 +48,13 @@ module Sass
         @tabs = 0
       end
 
+      def self.resolved(resolved_type, resolved_value)
+        node = new
+        node.resolved_type = resolved_type
+        node.resolved_value = resolved_value
+        node
+      end
+
       # Returns whether or not the given directive is excluded by this
       # node. `directive` may be "rule", which indicates whether
       # normal CSS rules should be excluded.

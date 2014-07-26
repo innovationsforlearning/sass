@@ -80,13 +80,68 @@ module Sass
     # Sass::Callable
     inherited_hash_reader :function
 
+    inherited_hash_reader :fn
+    inherited_hash_writer :fn
+
+    inherited_hash_reader :mx
+    inherited_hash_writer :mx
+
+    inherited_hash_writer :var
+
     # @param options [{Symbol => Object}] The options hash. See
     #   {file:SASS_REFERENCE.md#sass_options the Sass options documentation}.
     # @param parent [Environment] See \{#parent}
-    def initialize(parent = nil, options = nil)
+    def initialize(parent = nil, options = nil, mapper = nil)
       @parent = parent
       @options = options || (parent && parent.options) || {}
       @stack = Sass::Stack.new if @parent.nil?
+      @mapper = mapper
+      @ident_count = 0
+      @idents = {}
+    end
+
+    def unique_ident(name = nil)
+      return global_env.unique_ident(name) unless global?
+      @ident_count += 1
+      "_s_#{(name || 'i').to_s.gsub(/[^a-zA-Z0-9_]/, '_')}_#{@ident_count}"
+    end
+
+    def fn_variable(name)
+      ident, function = fn(name)
+      return unless ident
+      ident = "@#{ident}" if is_fn_global?(name)
+      return ident, function
+    end
+
+    def declare_fn(name, function)
+      ident = set_local_fn(name, [unique_ident("fn_#{name}"), function]).first
+      global? ? "@#{ident}" : ident
+    end
+
+    def mx_variable(name)
+      ident, mixin = mx(name)
+      return unless ident
+      ident = "@#{ident}" if is_mx_global?(name)
+      return ident, mixin
+    end
+
+    def declare_mx(name, mixin)
+      ident = set_local_mx(name, [unique_ident("mx_#{name}"), mixin]).first
+      global? ? "@#{ident}" : ident
+    end
+
+    def var_variable(name)
+      return unless (ident = var(name))
+      return is_var_global?(name) ? "@#{ident}" : ident
+    end
+
+    def declare_var(name)
+      ident = set_local_var(name, unique_ident("var_#{name}"))
+      global? ? "@#{ident}" : ident
+    end
+
+    def declare_global_var(name)
+      global_env.declare_var(name)
     end
 
     # Returns whether this is the global environment.
@@ -100,6 +155,10 @@ module Sass
     # @return {Environment?}
     def caller
       @caller || (@parent && @parent.caller)
+    end
+
+    def mapper
+      @mapper || (@parent && @parent.mapper)
     end
 
     # The content passed to this environment. This is naturally only set
@@ -131,7 +190,7 @@ module Sass
     #
     # @return [Sass::Stack]
     def stack
-      @stack || global_env.stack
+      mapper.stack_for Kernel.caller
     end
   end
 
