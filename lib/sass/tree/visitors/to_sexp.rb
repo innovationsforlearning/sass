@@ -110,6 +110,7 @@ class Sass::Tree::Visitors::ToSexp < Sass::Tree::Visitors::Base
     @root = s(:block)
   end
 
+  attr_reader :environment
   attr_reader :root
 
   public :visit
@@ -244,8 +245,8 @@ class Sass::Tree::Visitors::ToSexp < Sass::Tree::Visitors::Base
                                                  s(:call, s(:lvar, to_var), :to_i)),
                                    s(:lit, -1), s(:lit, 1))),
         each(s(:call, s(:const, :Range), :new,
-                   s(:call, s(:lvar, :direction_var), :*, s(:call, s(:lvar, from_var), :to_i)),
-                   s(:call, s(:lvar, :direction_var), :*, s(:call, s(:lvar, to_var), :to_i)),
+                   s(:call, s(:lvar, direction_var), :*, s(:call, s(:lvar, from_var), :to_i)),
+                   s(:call, s(:lvar, direction_var), :*, s(:call, s(:lvar, to_var), :to_i)),
                    lit(node.exclusive)),
             iter_var,
           s(:lasgn, iter_var, s(:call, sass(:Script, :Value, :Number), :new,
@@ -260,7 +261,7 @@ class Sass::Tree::Visitors::ToSexp < Sass::Tree::Visitors::Base
     declare_callable(@environment.declare_fn(node.name, node), node) do
       s(:iter, s(:call, nil, :catch, s(:lit, :_s_return)), s(:args),
         s(:block,
-          body,
+          yield,
           sass_error(s(:str, "Function #{node.name} finished without @return"))))
     end
   end
@@ -279,6 +280,7 @@ class Sass::Tree::Visitors::ToSexp < Sass::Tree::Visitors::Base
       return add_node(
         s(:call, sass(:Tree, :CssImportNode), :resolved,
           s(:str, "url(#{path})"),
+          s(:nil),
           node.source_range.to_sexp))
     end
 
@@ -340,19 +342,27 @@ class Sass::Tree::Visitors::ToSexp < Sass::Tree::Visitors::Base
     parser_var = @environment.unique_ident(:parser)
     selector_var = @environment.unique_ident(:selector)
     rule_var = @environment.unique_ident(:rule)
+    # TODO: statically detect if we might be/are definitely in @keyframes, and
+    # if so don't dynamically switch here.
     line_info(node, let(:@_s_at_rule_without_rule, s(:false)) do |old_at_rule_without_rule_var|
       s(:block,
         add_node(s(:lasgn, rule_var,
-          s(:call, sass(:Tree, :RuleNode), :resolved,
-            s(:call, parse(node, node.rule, :parse_selector), :resolve_parent_refs,
-              s(:call, s(:lvar, :_s_env), :selector),
-              s(:call, s(:lvar, old_at_rule_without_rule_var), :!)),
-            node.source_range.to_sexp,
-            node.selector_source_range.to_sexp))),
+          s(:if, s(:ivar, :@_s_in_keyframes),
+              s(:call, sass(:Tree, :KeyframeRuleNode), :new,
+                  parse(node, node.rule, :parse_keyframes_selector),
+                  node.source_range.to_sexp,
+                  lit(node.has_children)),
+            s(:call, sass(:Tree, :RuleNode), :resolved,
+              s(:call, parse(node, node.rule, :parse_selector), :resolve_parent_refs,
+                s(:call, s(:lvar, :_s_env), :selector),
+                s(:call, s(:lvar, old_at_rule_without_rule_var), :!)),
+              node.source_range.to_sexp,
+              node.selector_source_range.to_sexp)))),
         with_parent(rule_var) do
           s(:block,
-            s(:attrasgn, s(:lvar, :_s_env), :selector=,
-              s(:call, s(:lvar, rule_var), :resolved_rules)),
+            s(:if, s(:not, s(:ivar, :@_s_in_keyframes)),
+                s(:attrasgn, s(:lvar, :_s_env), :selector=,
+                  s(:call, s(:lvar, rule_var), :resolved_rules))),
             yield)
         end)
     end)
@@ -379,9 +389,16 @@ class Sass::Tree::Visitors::ToSexp < Sass::Tree::Visitors::Base
     block << add_node(s(:lasgn, at_root_var,
         s(:call, sass(:Tree, :AtRootNode), :resolved, resolved_type, resolved_value)))
     block << let(
-      :@_s_at_rule_without_rule, s(:call, s(:lvar, at_root_var), :exclude?, s(:str, 'rule'))) do
-      with_parent(at_root_var) {yield}
-    end
+          :@_s_at_rule_without_rule,
+          s(:or, s(:ivar, :@_s_at_rule_without_rule),
+                 s(:call, s(:lvar, at_root_var), :exclude?, s(:str, 'rule')))) do
+        let(
+            :@_s_in_keyframes,
+            s(:and, s(:ivar, :@_s_in_keyframes),
+                    s(:not, s(:call, s(:lvar, at_root_var), :exclude?, s(:str, 'keyframes'))))) do
+          with_parent(at_root_var) {yield}
+        end
+      end
     block
   end
 
@@ -421,8 +438,12 @@ class Sass::Tree::Visitors::ToSexp < Sass::Tree::Visitors::Base
     directive_var = @environment.unique_ident(:directive)
     s(:block,
       add_node(s(:lasgn, directive_var,
-          s(:call, sass(:Tree, :DirectiveNode), :resolved, interp(node.value)))),
-      with_parent(directive_var) {yield})
+          s(:call, sass(:Tree, :DirectiveNode), :resolved,
+            interp(node.value), lit(node.has_children)))),
+      let(:@_s_in_keyframes, s(:call, s(:call, s(:lvar, directive_var), :normalized_name), :==,
+                                      s(:str, "@keyframes"))) do
+        with_parent(directive_var) {yield}
+      end)
   end
 
   def visit_media(node)
@@ -445,7 +466,12 @@ class Sass::Tree::Visitors::ToSexp < Sass::Tree::Visitors::Base
   def visit_cssimport(node)
     add_node(s(:call, sass(:Tree, :CssImportNode), :resolved,
       interp([node.uri]),
-      (parse(node, node.query, :parse_media_query_list) if node.query && !node.query.empty?)))
+      if node.query && !node.query.empty?
+        parse(node, node.query, :parse_media_query_list)
+      else
+        s(:nil)
+      end),
+      node.source_range.to_sexp)
   end
 
   def declare_callable(name, node)
@@ -469,7 +495,7 @@ class Sass::Tree::Visitors::ToSexp < Sass::Tree::Visitors::Base
       body = s(:block)
       node.args.each do |(arg, default)|
         next unless default
-        block << or_asgn(@environment.var_variable(arg.name), default.to_sexp(self))
+        body << or_asgn(@environment.var_variable(arg.name), default.to_sexp(self))
       end
       if node.splat
         body << s(:lasgn, splat_arg,

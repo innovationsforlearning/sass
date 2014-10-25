@@ -62,7 +62,7 @@ module Sass::Script::Value
     end
 
     def to_sexp
-      s(:sass, :Script, :Value, :Null, :NULL)
+      sass(:Script, :Value, :Null, :NULL)
     end
 
     private

@@ -95,7 +95,7 @@ module Sass::Script::Value
     end
 
     def to_sexp
-      s(:call, sass(:Script, :Value, :String), :new, s(:str, value))
+      s(:call, sass(:Script, :Value, :String), :new, s(:str, value), s(:lit, type))
     end
   end
 end

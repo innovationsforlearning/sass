@@ -40,9 +40,9 @@ module Sass
         to_sexp = Visitors::ToSexp.new(options)
         sexp = to_sexp.visit(self)
         sexp = PrettifyProcessor.new.process(sexp)
-        pp sexp
+        #pp sexp
         ruby = Sass::Ruby2Ruby.new.process(sexp)
-        puts ruby
+        #puts ruby
         mapper = RubyMapper.new(ruby)
         environment = Environment.new(nil, nil, mapper)
         eval_context = Sass::Script::Functions::EvaluationContext.new(environment)
@@ -90,6 +90,21 @@ module Sass
               block << process(e)
             end
           end
+        end
+
+        def process_dstr(sexp)
+          # Work around seattlerb/ruby2ruby#32
+          dstr = s(:dstr)
+          sexp.shift
+          dstr << sexp.shift.dump[1...-1].gsub("\\\"", '"')
+          while subsexp = sexp.shift
+            if subsexp.first == :str || subsexp.first == :dsym
+              dstr << s(subsexp.first, subsexp.last.dump[1...-1].gsub("\\\"", '"'))
+            else
+              dstr << process(subsexp)
+            end
+          end
+          dstr
         end
       end
     end

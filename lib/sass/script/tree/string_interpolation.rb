@@ -77,11 +77,11 @@ module Sass::Script::Tree
       after_var = visitor.environment.unique_ident(:after)
 
       s(:block,
-        s(:lasgn, before_var, @before.to_sexp),
-        s(:lasgn, mid_var, @mid.to_sexp),
+        s(:lasgn, before_var, @before.to_sexp(visitor)),
+        s(:lasgn, mid_var, @mid.to_sexp(visitor)),
         s(:if, s(:call, s(:lvar, mid_var), :is_a?, sass(:Script, :Value, :String)),
             s(:lasgn, mid_var, s(:call, mid_var, :value))),
-        s(:lasgn, after_var, @after.to_sexp),
+        s(:lasgn, after_var, @after.to_sexp(visitor)),
         s(:call, sass(:Script, :Value, :String), :new,
           s(:dstr, "",
             s(:evstr, s(:lvar, before_var)),

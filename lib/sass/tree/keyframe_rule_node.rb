@@ -7,8 +7,10 @@ module Sass::Tree
     attr_accessor :resolved_value
 
     # @param resolved_value [String] See \{#resolved_value}
-    def initialize(resolved_value)
+    def initialize(resolved_value, source_range, has_children)
       @resolved_value = resolved_value
+      @source_range = source_range
+      @has_children = has_children
       super()
     end
   end

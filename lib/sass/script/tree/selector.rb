@@ -18,7 +18,7 @@ module Sass::Script::Tree
     protected
 
     def _to_sexp(visitor)
-      selector_var = visitor.environment.unique_indent(:selector)
+      selector_var = visitor.environment.unique_ident(:selector)
       s(:block,
         s(:lasgn, selector_var, s(:call, s(:lvar, :_s_env), :selector)),
         s(:if, s(:lvar, selector_var), s(:call, s(:lvar, selector_var), :to_sass_script),

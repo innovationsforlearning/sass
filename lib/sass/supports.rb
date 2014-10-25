@@ -18,6 +18,8 @@ module Sass::Supports
     # @return [String]
     def to_src(options); Sass::Util.abstract(self); end
 
+    def to_sexp(options); Sass::Util.abstract(self); end
+
     # Returns a deep copy of this condition and all its children.
     #
     # @return [Condition]
@@ -66,10 +68,15 @@ module Sass::Supports
     end
 
     def to_sexp(visitor)
-      s(:dstr, '',
+      left_parens = @left.is_a?(Negation)
+      right_parens = @right.is_a?(Negation) || @right.is_a?(Operator)
+      s(:dstr, left_parens ? '(' : '',
         s(:evstr, @left.to_sexp(visitor)),
+        s(:str, left_parens ? ')' : ''),
         s(:str, " #{op} "),
-        s(:evstr, @right.to_sexp(visitor)))
+        s(:str, right_parens ? '(' : ''),
+        s(:evstr, @right.to_sexp(visitor)),
+        s(:str, right_parens ? ')' : ''))
     end
 
     def deep_copy
@@ -131,7 +138,11 @@ module Sass::Supports
     end
 
     def to_sexp(visitor)
-      s(:dstr, "not ", s(:evstr, @condition.to_sexp(visitor)))
+      parens = @condition.is_a?(Negation) || @condition.is_a?(Operator)
+      s(:dstr, "not ",
+        s(:str, parens ? '(' : ''),
+        s(:evstr, @condition.to_sexp(visitor)),
+        s(:str, parens ? ')' : ''))
     end
 
     private
