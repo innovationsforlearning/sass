@@ -4,6 +4,16 @@ module Sass
     # It doesn't have a functional purpose other than to add the `@import`ed file
     # to the backtrace if an error occurs.
     class ImportNode < RootNode
+      def _dump(f)
+        Marshal.dump([@imported_filename, children])
+      end
+
+      def self._load(data)
+        filename, children = Marshal.load(data)
+        node = ImportNode.new(filename)
+        node.children = children
+        node
+      end
       # The name of the imported file as it appears in the Sass document.
       #
       # @return [String]
